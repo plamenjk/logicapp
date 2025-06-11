@@ -1,13 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 const users = []; // {id, username, password, role}
 const tokens = {}; // token => userId
-const packages = []; // {id, senderId, receiverId, weight, toOffice, address, price, createdAt, delivered}
+const companies = []; // {id, name}
+const offices = []; // {id, companyId, address}
+const packages = []; // {id, companyId, senderId, receiverId, weight, toOffice, officeId, address, price, createdAt, delivered}
 
 function generateId() {
   return crypto.randomBytes(8).toString('hex');
@@ -54,12 +58,92 @@ app.post('/login', (req, res) => {
   res.json({token});
 });
 
+// ----- User management -----
+app.get('/users', authenticate, employeeOnly, (req, res) => {
+  res.json(users);
+});
+
+app.put('/users/:id', authenticate, employeeOnly, (req, res) => {
+  const user = users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({error: 'Not found'});
+  const {username, password, role} = req.body;
+  if (username) user.username = username;
+  if (password) user.password = password;
+  if (role) user.role = role;
+  res.json(user);
+});
+
+app.delete('/users/:id', authenticate, employeeOnly, (req, res) => {
+  const idx = users.findIndex(u => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({error: 'Not found'});
+  const removed = users.splice(idx, 1)[0];
+  res.json(removed);
+});
+
+// ----- Company management -----
+app.get('/companies', authenticate, employeeOnly, (req, res) => {
+  res.json(companies);
+});
+
+app.post('/companies', authenticate, employeeOnly, (req, res) => {
+  const {name} = req.body;
+  if (!name) return res.status(400).json({error: 'Missing name'});
+  const id = generateId();
+  const company = {id, name};
+  companies.push(company);
+  res.json(company);
+});
+
+app.put('/companies/:id', authenticate, employeeOnly, (req, res) => {
+  const c = companies.find(c => c.id === req.params.id);
+  if (!c) return res.status(404).json({error: 'Not found'});
+  if (req.body.name) c.name = req.body.name;
+  res.json(c);
+});
+
+app.delete('/companies/:id', authenticate, employeeOnly, (req, res) => {
+  const idx = companies.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({error: 'Not found'});
+  const removed = companies.splice(idx,1)[0];
+  res.json(removed);
+});
+
+// ----- Office management -----
+app.get('/offices', authenticate, employeeOnly, (req, res) => {
+  res.json(offices);
+});
+
+app.post('/offices', authenticate, employeeOnly, (req, res) => {
+  const {companyId, address} = req.body;
+  if (!companyId || !address) return res.status(400).json({error: 'Missing fields'});
+  if (!companies.find(c => c.id === companyId)) return res.status(400).json({error: 'Invalid company'});
+  const id = generateId();
+  const office = {id, companyId, address};
+  offices.push(office);
+  res.json(office);
+});
+
+app.put('/offices/:id', authenticate, employeeOnly, (req, res) => {
+  const office = offices.find(o => o.id === req.params.id);
+  if (!office) return res.status(404).json({error:'Not found'});
+  if (req.body.companyId) office.companyId = req.body.companyId;
+  if (req.body.address) office.address = req.body.address;
+  res.json(office);
+});
+
+app.delete('/offices/:id', authenticate, employeeOnly, (req, res) => {
+  const idx = offices.findIndex(o => o.id === req.params.id);
+  if (idx === -1) return res.status(404).json({error:'Not found'});
+  const removed = offices.splice(idx,1)[0];
+  res.json(removed);
+});
+
 app.post('/packages', authenticate, employeeOnly, (req, res) => {
-  const {senderId, receiverId, weight, toOffice, address} = req.body;
+  const {companyId, senderId, receiverId, weight, toOffice, officeId, address} = req.body;
   if (!senderId || !receiverId || !weight) return res.status(400).json({error: 'Missing fields'});
   const id = generateId();
   const price = calcPrice(weight, toOffice);
-  const pack = {id, senderId, receiverId, weight, toOffice: !!toOffice, address, price, createdAt: new Date(), delivered: false};
+  const pack = {id, companyId, senderId, receiverId, weight, toOffice: !!toOffice, officeId, address, price, createdAt: new Date(), delivered: false};
   packages.push(pack);
   res.json(pack);
 });
@@ -84,6 +168,27 @@ app.put('/packages/:id/deliver', authenticate, employeeOnly, (req, res) => {
   if (!pack) return res.status(404).json({error: 'Not found'});
   pack.delivered = true;
   res.json(pack);
+});
+
+app.put('/packages/:id', authenticate, employeeOnly, (req, res) => {
+  const pack = packages.find(p => p.id === req.params.id);
+  if (!pack) return res.status(404).json({error:'Not found'});
+  const {senderId, receiverId, weight, toOffice, officeId, address} = req.body;
+  if (senderId) pack.senderId = senderId;
+  if (receiverId) pack.receiverId = receiverId;
+  if (weight) pack.weight = weight;
+  if (typeof toOffice !== 'undefined') pack.toOffice = toOffice;
+  if (officeId) pack.officeId = officeId;
+  if (address) pack.address = address;
+  pack.price = calcPrice(pack.weight, pack.toOffice);
+  res.json(pack);
+});
+
+app.delete('/packages/:id', authenticate, employeeOnly, (req, res) => {
+  const idx = packages.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({error:'Not found'});
+  const removed = packages.splice(idx,1)[0];
+  res.json(removed);
 });
 
 app.get('/revenue', authenticate, employeeOnly, (req, res) => {
