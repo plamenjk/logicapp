@@ -1,0 +1,21 @@
+{
+  "name": "logicapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "mocha"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "mocha": "^11.6.0",
+    "should": "^13.2.3",
+    "supertest": "^7.1.1"
+  }
+}

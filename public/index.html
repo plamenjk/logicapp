@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Logistic Company</title>
+</head>
+<body>
+  <h1>Logistic Company Demo</h1>
+  <div id="auth">
+    <h2>Register</h2>
+    <form id="registerForm">
+      <input type="text" id="regUsername" placeholder="Username" required>
+      <input type="password" id="regPassword" placeholder="Password" required>
+      <select id="regRole">
+        <option value="client">Client</option>
+        <option value="employee">Employee</option>
+      </select>
+      <button>Register</button>
+    </form>
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="text" id="logUsername" placeholder="Username" required>
+      <input type="password" id="logPassword" placeholder="Password" required>
+      <button>Login</button>
+    </form>
+  </div>
+  <div id="main" style="display:none;">
+    <h2>Packages</h2>
+    <ul id="packages"></ul>
+    <h3>Create Package</h3>
+    <form id="pkgForm">
+      <input type="text" id="senderId" placeholder="Sender ID" required>
+      <input type="text" id="receiverId" placeholder="Receiver ID" required>
+      <input type="number" id="weight" placeholder="Weight" required>
+      <label><input type="checkbox" id="toOffice"> To Office</label>
+      <input type="text" id="address" placeholder="Address">
+      <button>Create</button>
+    </form>
+  </div>
+<script src="app.js"></script>
+</body>
+</html>
